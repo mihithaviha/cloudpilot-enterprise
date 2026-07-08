@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - JWT_SECRET=cloudpilot_secret_token_12345
+      - LOCAL_DB_PATH=./db.sqlite
+    volumes:
+      - server_data:/app/server/data
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+
+volumes:
+  server_data:
