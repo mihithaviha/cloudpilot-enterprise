@@ -318,12 +318,18 @@ Main features: Smart Natural Language Search, AI Document Exporter, Live Logs, v
   };
 };
 
+let inMemoryData = null;
+
 // Initialize DB file if not exists or is empty
 export const initializeDB = () => {
   let data = {};
   if (!fs.existsSync(DB_FILE) || fs.readFileSync(DB_FILE, 'utf8').trim() === '') {
-    const defaultData = getSeedData();
-    fs.writeFileSync(DB_FILE, JSON.stringify(defaultData, null, 2), 'utf8');
+    data = getSeedData();
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+      console.warn("Could not seed database file on disk, using memory:", e.message);
+    }
   } else {
     try {
       data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
@@ -340,11 +346,19 @@ export const initializeDB = () => {
         updated = true;
       }
       if (updated) {
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+        try {
+          fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+        } catch (e) {
+          console.warn("Could not save schema updates to disk:", e.message);
+        }
       }
     } catch (e) {
       data = getSeedData();
-      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+      } catch (err) {
+        console.warn("Could not restore database file to disk:", err.message);
+      }
     }
   }
 };
@@ -352,13 +366,26 @@ export const initializeDB = () => {
 // Lowdb-like simple implementation
 export const db = {
   read: () => {
+    if (inMemoryData) return inMemoryData;
     initializeDB();
-    const data = fs.readFileSync(DB_FILE, 'utf8');
-    return JSON.parse(data);
+    try {
+      const data = fs.readFileSync(DB_FILE, 'utf8');
+      inMemoryData = JSON.parse(data);
+      return inMemoryData;
+    } catch (e) {
+      console.warn("Read from db.json failed, falling back to memory seed:", e.message);
+      inMemoryData = getSeedData();
+      return inMemoryData;
+    }
   },
 
   write: (data) => {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    inMemoryData = data;
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+      console.warn("Write to db.json failed (likely read-only filesystem), keeping changes in memory:", e.message);
+    }
   },
 
   // Read a specific table

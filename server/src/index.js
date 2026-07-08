@@ -76,10 +76,14 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`========================================`);
-  console.log(`CloudPilot AI API Server Running:`);
-  console.log(`-> Local: http://localhost:${PORT}`);
-  console.log(`-> Environment: ${process.env.NODE_ENV || 'production'}`);
-  console.log(`========================================`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`========================================`);
+    console.log(`CloudPilot AI API Server Running:`);
+    console.log(`-> Local: http://localhost:${PORT}`);
+    console.log(`-> Environment: ${process.env.NODE_ENV || 'production'}`);
+    console.log(`========================================`);
+  });
+}
+
+export default app;
