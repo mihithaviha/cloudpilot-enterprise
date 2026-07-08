@@ -70,7 +70,7 @@ const MainApp: React.FC = () => {
 
         {/* Tab view rendering */}
         <main className="flex-1 overflow-y-auto no-scrollbar">
-          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} />}
           {activeTab === 'chat' && <Chat />}
           {activeTab === 'knowledge' && <KnowledgeBase />}
           {activeTab === 'generator' && <DocGen />}
