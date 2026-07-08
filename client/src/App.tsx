@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -21,11 +21,35 @@ import { HRHub } from './pages/HRHub';
 import { FinanceSales } from './pages/FinanceSales';
 
 const MainApp: React.FC = () => {
-  const { token, loading } = useAuth();
+  const { token, loading, user } = useAuth();
   
   // Navigation states: 'landing' | 'login' | dashboard active tabs
   const [viewState, setViewState] = useState<'landing' | 'login' | 'dashboard'>('login');
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  useEffect(() => {
+    if (user) {
+      switch (user.role) {
+        case 'Admin':
+          setActiveTab('users');
+          break;
+        case 'HR':
+          setActiveTab('hr');
+          break;
+        case 'Finance':
+          setActiveTab('finance');
+          break;
+        case 'Manager':
+          setActiveTab('workflows');
+          break;
+        case 'Employee':
+          setActiveTab('tasks');
+          break;
+        default:
+          setActiveTab('dashboard');
+      }
+    }
+  }, [user]);
 
   // Loading skeleton while verifying JWT
   if (loading) {

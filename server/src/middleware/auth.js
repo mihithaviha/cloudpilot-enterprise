@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { db } from '../models/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cloudpilot_secret_token_12345';
 
@@ -16,6 +17,25 @@ export const authenticateToken = (req, res, next) => {
       return res.status(403).json({ error: 'Session expired. Please log in again.' });
     }
     req.user = user;
+
+    // Auto-recreate user profile in DB if it disappeared (due to serverless/stateless environments)
+    try {
+      let dbUser = db.findOne('users', u => u.id === user.id);
+      if (!dbUser) {
+        db.insert('users', {
+          id: user.id,
+          email: user.email,
+          password: '', // stateless google/custom login user profile restore
+          full_name: user.fullName || user.email.split('@')[0],
+          role: user.role || 'Employee',
+          avatar_url: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.fullName || user.email)}`,
+          organization_name: 'Google Workspace'
+        });
+      }
+    } catch (dbErr) {
+      console.warn('Failed to ensure user existence in DB:', dbErr.message);
+    }
+
     next();
   });
 };
