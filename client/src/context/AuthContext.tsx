@@ -16,6 +16,7 @@ interface AuthContextType {
   loading: boolean;
   login: (credentials: any) => Promise<void>;
   register: (userData: any) => Promise<void>;
+  googleLogin: (data: { email: string; fullName?: string; role?: string; avatarUrl?: string }) => Promise<void>;
   logout: () => void;
   updateUserRoleState: (userId: string, role: any) => void;
 }
@@ -70,6 +71,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const googleLogin = async (data: { email: string; fullName?: string; role?: string; avatarUrl?: string }) => {
+    setLoading(true);
+    try {
+      const response = await api.auth.googleLogin(data);
+      localStorage.setItem('token', response.token);
+      setToken(response.token);
+      setUser(response.user);
+    } catch (error) {
+      setLoading(false);
+      throw error;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -85,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserRoleState }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, googleLogin, logout, updateUserRoleState }}>
       {children}
     </AuthContext.Provider>
   );

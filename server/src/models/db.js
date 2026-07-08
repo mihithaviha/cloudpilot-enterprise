@@ -424,6 +424,11 @@ export const db = {
   // Update item
   update: (table, filterFn, updatedFields) => {
     const data = db.read();
+    if (!Array.isArray(data[table])) {
+      data[table] = { ...data[table], ...updatedFields, updated_at: new Date().toISOString() };
+      db.write(data);
+      return 1;
+    }
     const list = data[table] || [];
     let updatedCount = 0;
     

@@ -123,6 +123,80 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/google
+router.post('/google', async (req, res) => {
+  try {
+    const { email, fullName, role, avatarUrl } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Google email is required.' });
+    }
+
+    // Check if user already exists
+    let user = db.findOne('users', u => u.email === email);
+    if (!user) {
+      // Register new user automatically
+      const name = fullName || email.split('@')[0];
+      const userRole = role || 'Employee';
+      user = db.insert('users', {
+        email,
+        password: '', // No password for Google authenticated users
+        full_name: name,
+        role: userRole,
+        avatar_url: avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(name)}`,
+        organization_name: 'Google Workspace'
+      });
+
+      // Audit Log for registration
+      db.insert('audit_logs', {
+        user_id: user.id,
+        action: 'USER_REGISTER_GOOGLE',
+        target_type: 'user',
+        target_id: user.id,
+        details: { email: user.email, role: user.role },
+        ip_address: req.ip
+      });
+    } else {
+      // If user exists, but we want to allow updating the role for testing convenience:
+      if (role && role !== user.role) {
+        db.update('users', u => u.id === user.id, { role });
+        user.role = role;
+      }
+    }
+
+    // Sign JWT
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, fullName: user.full_name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Audit Log for login
+    db.insert('audit_logs', {
+      user_id: user.id,
+      action: 'USER_LOGIN_GOOGLE',
+      target_type: 'user',
+      target_id: user.id,
+      details: { success: true, email: user.email },
+      ip_address: req.ip
+    });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        avatar_url: user.avatar_url,
+        organization_name: user.organization_name
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/auth/me
 router.get('/me', authenticateToken, (req, res) => {
   const user = db.findOne('users', u => u.id === req.user.id);
